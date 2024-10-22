@@ -1,0 +1,60 @@
+---
+- name: Download MPS Tarball
+  become: no
+  get_url:
+      url: "https://download.jetbrains.com/mps/{{dsl_mps_family}}/MPS-{{dsl_mps_version}}.tar.gz"
+      dest: "{{ansible_user_dir}}/{{base_download_directory}}/mps-{{dsl_mps_version}}.tar.gz"
+      mode: 0444
+  when: dsl_mps_install
+
+- name: Uncompress MPS Tarball
+  become: no
+  unarchive:
+      src: "{{ansible_user_dir}}/{{base_download_directory}}/mps-{{dsl_mps_version}}.tar.gz"
+      dest: "{{ansible_user_dir}}/{{base_software_directory}}"
+      copy: no
+      owner: "{{ansible_user_uid}}"
+      group: "{{ansible_user_gid}}"
+      mode: 0555
+      creates: "{{ansible_user_dir}}/{{base_software_directory}}/MPS {{dsl_mps_version}}/build.txt"
+  when: dsl_mps_install
+
+- name: Create Softlink To MPS
+  become: no
+  file:
+      src: "{{ansible_user_dir}}/{{base_software_directory}}/MPS {{dsl_mps_family}}"
+      dest: "{{ansible_user_dir}}/{{base_software_directory}}/mps"
+      owner: "{{ansible_user_uid}}"
+      group: "{{ansible_user_gid}}"
+      state: link
+  when: dsl_mps_install
+
+- name: Create Desktop Icon For MPS
+  become: no
+  template:
+      src: "templates/mps.desktop.j2"
+      dest: "{{ansible_user_dir}}/Desktop/mps.desktop"
+      owner: "{{ansible_user_uid}}"
+      group: "{{ansible_user_gid}}"
+      mode: 0755
+  when: dsl_mps_install
+
+- name: Install Optional Packages
+  become: yes
+  package:
+      name: "{{item}}"
+      state: present
+  with_items:
+  - "antlr"
+  when: dsl_optional_install
+
+- name: Set Global Environment To Have MPS Use Shared JDK
+  become: yes
+  template:
+      src: "templates/mps-environment.sh.j2"
+      dest: "/etc/profile.d/mps-environment.sh"
+      owner: "{{ansible_user_uid}}"
+      group: "{{ansible_user_gid}}"
+      mode: 0555
+  when: dsl_mps_share_jdk
+
